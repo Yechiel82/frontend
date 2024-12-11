@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tambahkan pengeluaran baru {% if type %}({{ type }}){% else %}{% endif %}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+
+        .container {
+            width: 50%;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        label {
+            display: block;
+            margin-top: 10px;
+        }
+
+        input[type="text"], input[type="date"], input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .cancel-button {
+            background-color: #ff4d4d;
+            margin-left: 10px;
+        }
+
+        .cancel-button:hover {
+            background-color: #cc3d3d;
+        }
+
+        .delete-button {
+            background-color: #ff4d4d;
+            margin-left: 10px;
+        }
+
+        .delete-button:hover {
+            background-color: #cc3d3d;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>{% if card %}Edit pengeluaran{% else %}Tambahkan pengeluaran baru{% endif %}</h1>
+        
+        {% if card %}
+        <p>Editing card with ID: {{ card['ID'] }}</p>
+        {% endif %}
+        
+        <form action="/add_card" method="POST">
+            <label for="date">Date</label>
+            <input type="date" id="date" name="date" value="{{ card['Date'] if card else '' }}" required>
+        
+            <label for="description">Description</label>
+            <input type="text" id="description" name="description" value="{{ card['Description'] if card else '' }}" required>
+        
+            <label for="amount">Amount</label>
+            <input type="number" id="amount" name="amount" value="{{ card['Amount'] if card else '' }}" required>
+        
+            <!-- Hidden input for type -->
+            <input type="hidden" name="type" value="{{ type }}">
+
+            <!-- Hidden input for card_id (only for editing) -->
+            <input type="hidden" name="card_id" value="{{ card['ID'] if card else '' }}">
+        
+            <button type="submit">{% if card %}Save Changes{% else %}Add Card{% endif %}</button>
+            
+            <button type="button" class="cancel-button" onclick="window.location.href='/main'">Cancel</button>
+
+        </form>
+        {% if card %}
+        <form action="/delete_card/{{ card['ID'] }}" method="POST" style="display:inline;">
+            <button type="submit" class="delete-button">Delete</button>
+        </form>
+        {% endif %}
+    </div>
+
+    
+</body>
+</html>

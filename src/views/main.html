@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            padding: 20px;
+            background-color: #f4f4f4;
+            border-bottom: 2px solid #ddd;
+        }
+
+        .timedate label {
+            margin-right: 10px;
+        }
+
+        .timedate span {
+            margin-left: 10px;
+            font-style: italic;
+            color: #555;
+        }
+
+        .checkboxes label {
+            display: inline-block;
+            margin-right: 10px;
+        }
+
+        .logout button {
+            padding: 10px 20px;
+            background-color: #ff4d4d;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        .container {
+            display: flex;
+            justify-content: space-between;
+            padding: 20px;
+        }
+
+        .column {
+            width: 18%;
+            border: 1px solid #ddd;
+            padding: 10px;
+            display: none; /* Initially hide all columns */
+        }
+
+        .column-header {
+            font-weight: bold;
+            text-align: center;
+            display: inline-block;
+            margin-right: 10px;
+        }
+
+        .column-header button {
+            font-size: 18px;
+            cursor: pointer;
+            background-color: transparent;
+            border: none;
+            color: #007bff;
+            padding: 0;
+            margin: 0;
+        }
+
+        .column-content {
+            margin-top: 10px;
+        }
+
+        .active {
+            display: block; /* Show column when checkbox is checked */
+        }
+
+        .card-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+
+        .limit {
+            font-weight: bold;
+            color: red;
+            text-align: center;
+        }
+
+        .over-budget {
+            background-color: #ffcccc; /* Light red background */
+            border: 1px solid #ff0000; /* Red border */
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="timedate">
+            <label>Start Date:</label>
+            <input
+                type="date"
+                id="start_date"
+                name="start_date"
+                value="{{ start_date }}"
+                onchange="filterByDate()"
+            >
+            <span id="start_date_display"></span>
+        
+            <label>End Date:</label>
+            <input
+                type="date"
+                id="end_date"
+                name="end_date"
+                value="{{ end_date }}"
+                onchange="filterByDate()"
+            >
+            <span id="end_date_display"></span>
+
+            <div style="margin-top: 10px; text-align: center;">
+                <button 
+                    onclick="window.location.href='/limit'" 
+                    style="padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;"
+                >
+                    Set and Change Daily Spending Limit
+                </button>
+                <p>Limit can only be seen if start date and end date is same</p>
+            </div>
+        </div>
+
+        
+
+        <div class="checkboxes">
+            <label><input type="checkbox" name="bills" checked onchange="toggleColumns()"> Bills</label>
+            <label><input type="checkbox" name="food_drinks" checked onchange="toggleColumns()"> Food n Drinks</label>
+            <label><input type="checkbox" name="entertainment" checked onchange="toggleColumns()"> Entertainment</label>
+            <label><input type="checkbox" name="savings_investment" checked onchange="toggleColumns()"> Saving n Investment</label>
+            <label><input type="checkbox" name="needs" checked onchange="toggleColumns()"> Needs</label>
+        </div>
+
+        <div class="logout">
+            <button onclick="window.location.href='/'">Log Out</button>
+        </div>
+    </header>
+
+    <div class="container">
+        {% for column, cards in columns.items() %}
+        <div class="column {% if start_date and end_date and start_date == end_date and remaining_budget[column] <= 0 %}over-budget{% endif %}" id="{{ column }}">
+            <div class="column-header">
+                <!-- Check if start_date and end_date are the same -->
+                {{ column.replace('_', ' ').title() }}
+                <a href="/add_card?type={{ column }}" class="add-button">+</a>
+                {% if start_date and end_date and start_date == end_date %}
+                    <div class="limit">
+                        LIMIT: {{ remaining_budget[column] }}
+                    </div>
+                {% endif %}
+            </div>
+            <div class="column-content">
+                {% for card in cards %}
+                <div class="card-item" data-ID="{{ card['ID'] }}" data-type="{{ card['Type'] }}" ondblclick="editCard(event)">
+                    <p><strong>{{ card['Description'] }}</strong></p>
+                    <p>Amount: {{ card['Amount'] }}</p>
+                    <p class="card-date" data-raw-date="{{ card['Date'] }}"></p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <script>
+        // Function to edit a card (triggered on double-click)
+        function editCard(event) {
+            const cardID = event.currentTarget.dataset.id; // Get the card ID
+            const cardType = event.currentTarget.dataset.type; // Get the type from the data attribute
+
+            // Redirect to the add_card route with card ID and type
+            window.location.href = `/add_card?ID=${cardID}&type=${cardType}`;
+        }
+
+        // Function to format date to dd/mm/yyyy
+        function formatDateForDisplay(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}/${month}/${year}`;
+        }
+
+        // Function to format card dates
+        function formatCardDates() {
+            const cardDateElements = document.querySelectorAll('.card-date');
+            cardDateElements.forEach(element => {
+                const rawDate = element.getAttribute('data-raw-date');
+                const formattedDate = formatDateForDisplay(rawDate);
+                element.textContent = `Date: ${formattedDate}`;
+            });
+        }
+
+        // Function to toggle columns
+        function toggleColumns() {
+            const checkboxes = document.querySelectorAll('.checkboxes input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+                const columnId = checkbox.name;
+                const column = document.getElementById(columnId);
+                if (checkbox.checked) {
+                    column.classList.add('active');
+                } else {
+                    column.classList.remove('active');
+                }
+            });
+            saveCheckboxState();
+        }
+
+        // Function to save checkbox state
+        function saveCheckboxState() {
+            const checkboxes = document.querySelectorAll('.checkboxes input[type="checkbox"]');
+            const checkboxState = {};
+            checkboxes.forEach(checkbox => {
+                checkboxState[checkbox.name] = checkbox.checked;
+            });
+            localStorage.setItem('checkboxState', JSON.stringify(checkboxState));
+        }
+
+        // Load checkbox state
+        function loadCheckboxState() {
+            const checkboxState = JSON.parse(localStorage.getItem('checkboxState') || '{}');
+            const checkboxes = document.querySelectorAll('.checkboxes input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+                const columnId = checkbox.name;
+                if (checkboxState[columnId] !== undefined) {
+                    checkbox.checked = checkboxState[columnId];
+                }
+                if (checkbox.checked) {
+                    document.getElementById(columnId).classList.add('active');
+                }
+            });
+        }
+
+        // Function to filter by date
+        function filterByDate() {
+            const startDate = document.getElementById('start_date').value;
+            const endDate = document.getElementById('end_date').value;
+
+            // Build the new URL with query parameters
+            const url = new URL(window.location.href);
+
+            // Set the query parameters for start_date and end_date only if they are not empty
+            if (startDate) {
+                url.searchParams.set("start_date", startDate);
+            } else {
+                url.searchParams.delete("start_date");
+            }
+
+            if (endDate) {
+                url.searchParams.set("end_date", endDate);
+            } else {
+                url.searchParams.delete("end_date");
+            }
+
+            // Reload the page with the updated URL
+            window.location.href = url.toString();
+        }
+
+        // On DOM load
+        document.addEventListener('DOMContentLoaded', function () {
+            loadCheckboxState();
+            formatCardDates(); // Format the card dates on load
+            toggleColumns();
+        });
+    </script>
+</body>
+</html>
